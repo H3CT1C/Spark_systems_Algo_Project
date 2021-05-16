@@ -1,2 +1,2 @@
-public interface SchedulerManager {
+public class SchedulerManager {
 }

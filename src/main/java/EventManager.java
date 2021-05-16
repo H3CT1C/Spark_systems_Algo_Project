@@ -1,2 +1,2 @@
-public interface EventManager {
+public class EventManager {
 }
