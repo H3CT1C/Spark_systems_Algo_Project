@@ -1,2 +1,2 @@
-public class RiskWatcher {
+public class RiskWatcher extends EventListener{
 }

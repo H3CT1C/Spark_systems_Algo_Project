@@ -1,2 +1,3 @@
-public class AnalyticManager {
+public class AnalyticManager extends EventListener {
+
 }
