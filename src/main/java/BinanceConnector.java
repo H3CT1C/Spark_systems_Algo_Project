@@ -16,7 +16,7 @@ public class BinanceConnector {
 
     private static final String BIDS  = "BIDS";
     private static final String ASKS  = "ASKS";
-
+    private OrderBook Orderbookcache;
     private long lastUpdateId;
     private String symbol;
 
@@ -61,7 +61,7 @@ public class BinanceConnector {
     /**
      * Begins streaming of depth events.
      */
-    public void startDepthEventStreaming(String symbol) {
+    public void startDepthEventStreaming(String symbol, EventManager eventManager) {
         BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
         BinanceApiWebSocketClient client = factory.newWebSocketClient();
 
@@ -72,6 +72,13 @@ public class BinanceConnector {
                 updateOrderBook(getAsks(), response.getAsks());
                 updateOrderBook(getBids(), response.getBids());
                 printDepthCache();
+            try{
+                eventManager.publish(Orderbookcache);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+
             }
         });
     }
@@ -190,7 +197,15 @@ public class BinanceConnector {
         System.out.println("BEST ASK: " + toDepthCacheEntryString(getBestAsk()));
         System.out.println("BEST BID: " + toDepthCacheEntryString(getBestBid()));
     }
+    public OrderBook getOrderBook(String Symbol){
+        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
+        BinanceApiRestClient client = factory.newRestClient();
 
+        OrderBook orderBook = client.getOrderBook(symbol,10);
+        List<OrderBookEntry> asks = orderBook.getAsks();
+        OrderBookEntry firstAskEntry = asks.get(0);
+        return orderBook;
+    }
     /**
      * Pretty prints an order book entry in the format "price / quantity".
      */

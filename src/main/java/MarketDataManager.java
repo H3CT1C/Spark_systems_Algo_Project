@@ -3,6 +3,7 @@ import java.util.Map;
 public class MarketDataManager implements Runnable{
 
     private Map<String, BinanceConnector> connections;
+    EventManager eventManager = new EventManager();
     public MarketDataManager () {
         this.connections = new HashMap<>();
     }
@@ -27,10 +28,11 @@ public class MarketDataManager implements Runnable{
     }
 
     public void subscribeOrderBook(String symbol) {
+
         if (!this.isSubscribed(symbol)) {
             this.subscribeGateway(symbol);
         }
-        this.getConnection(symbol).startDepthEventStreaming(symbol);
+        this.getConnection(symbol).startDepthEventStreaming(symbol, eventManager);
     }
 
     public void subscribeTrades(String symbol) {
