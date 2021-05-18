@@ -15,4 +15,8 @@ public class EventManager{
         orderBookBroker.addEvent(orderBook);
         orderBookBroker.broadcast();
     }
+    public void addListener(EventListener listener){
+        orderBookBroker.addListener(listener);
+        scheduleQueue.addListener(listener);
+    }
 }
