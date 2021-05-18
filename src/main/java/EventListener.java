@@ -7,6 +7,7 @@ import com.binance.api.client.domain.market.OrderBook;
 public abstract class EventListener {
 
     void handleEvent(DepthEvent depthEvent){}
+    void handleEvent(OrderBook orderBook){}
 
     //void handleEvent(ScheduleEvent timer){}
 }

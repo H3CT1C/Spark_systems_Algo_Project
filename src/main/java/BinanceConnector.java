@@ -16,8 +16,9 @@ public class BinanceConnector {
 
     private static final String BIDS  = "BIDS";
     private static final String ASKS  = "ASKS";
-    private OrderBook Orderbookcache;
+    private Source.OrderBook orderBookCache;
     private long lastUpdateId;
+    private long orderBookLastUpdateId;
     private String symbol;
 
     private Map<String, NavigableMap<BigDecimal, BigDecimal>> depthCache;
@@ -72,12 +73,6 @@ public class BinanceConnector {
                 updateOrderBook(getAsks(), response.getAsks());
                 updateOrderBook(getBids(), response.getBids());
                 printDepthCache();
-            try{
-                eventManager.publish(Orderbookcache);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
 
             }
         });
@@ -122,6 +117,47 @@ public class BinanceConnector {
             System.out.println(updateAggTrade);
         });
     }
+
+    public void initializeOrderBookCache(String symbol){
+        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
+        BinanceApiRestClient client = factory.newRestClient();
+        OrderBook orderBook = client.getOrderBook(symbol.toUpperCase(), 10);
+
+        this.orderBookCache = new Source.OrderBook();
+        this.orderBookLastUpdateId = orderBook.getLastUpdateId();
+
+        NavigableMap<BigDecimal, BigDecimal> asks = new TreeMap<>(Comparator.reverseOrder());
+        for (OrderBookEntry ask : orderBook.getAsks()) {
+            asks.put(new BigDecimal(ask.getPrice()), new BigDecimal(ask.getQty()));
+        }
+        orderBookCache.place("ASKS", asks);
+
+        NavigableMap<BigDecimal, BigDecimal> bids = new TreeMap<>(Comparator.reverseOrder());
+        for (OrderBookEntry bid : orderBook.getBids()) {
+            bids.put(new BigDecimal(bid.getPrice()), new BigDecimal(bid.getQty()));
+        }
+        orderBookCache.place("BIDS", bids);
+    }
+
+    public void startOrderBookEventStreaming(String symbol, EventManager eventManager) {
+        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
+        BinanceApiWebSocketClient client = factory.newWebSocketClient();
+
+        client.onDepthEvent(symbol.toLowerCase(), response -> {
+            if (response.getFinalUpdateId() > orderBookLastUpdateId) {
+                orderBookLastUpdateId = response.getFinalUpdateId();
+                updateOrderBook(orderBookCache.getAsks(), response.getAsks());
+                updateOrderBook(orderBookCache.getBids(), response.getBids());
+
+                try {
+                    eventManager.publish(orderBookCache);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
 
     /**
      * Updates an order book (bids or asks) with a delta received from the server.
