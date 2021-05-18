@@ -32,7 +32,8 @@ public class MarketDataManager implements Runnable{
         if (!this.isSubscribed(symbol)) {
             this.subscribeGateway(symbol);
         }
-        this.getConnection(symbol).startDepthEventStreaming(symbol, eventManager);
+       // this.getConnection(symbol).startDepthEventStreaming(symbol, eventManager);
+        this.getConnection(symbol).startOrderBookEventStreaming(symbol, eventManager);
     }
 
     public void subscribeTrades(String symbol) {
