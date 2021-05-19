@@ -11,14 +11,18 @@ public class EventBroker<T>{
 
     public void addEvent(T event) throws InterruptedException{
         eventQueue.put(event);
-    }
 
+    }
+    public T get() throws InterruptedException{
+        return eventQueue.take();
+    }
     public void broadcast() throws InterruptedException{
         if(eventQueue.isEmpty()){
             System.out.println("No events to broadcast");
         }
         else{
             while(!eventQueue.isEmpty()){
+
                 T event = eventQueue.remove();
                 sendToListeners(event);
             }

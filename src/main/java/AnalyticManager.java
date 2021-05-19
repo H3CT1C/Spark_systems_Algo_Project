@@ -18,5 +18,10 @@ public class AnalyticManager extends EventListener {
 
     public void handleEvent(OrderBook orderBook){
         orderBookCache.put(orderBookId++, orderBook);
+        //buffer the orderbooks
     }
+
+    // print the order book at once every 5 and 10 seconds, for scheduleEvent
+    // on a separate thread from the binance thread
+
 }

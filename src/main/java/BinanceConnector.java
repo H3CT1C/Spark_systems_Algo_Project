@@ -1,10 +1,3 @@
-import com.binance.api.client.BinanceApiClientFactory;
-import com.binance.api.client.BinanceApiRestClient;
-import com.binance.api.client.BinanceApiWebSocketClient;
-import com.binance.api.client.domain.market.AggTrade;
-import com.binance.api.client.domain.market.OrderBook;
-import com.binance.api.client.domain.market.OrderBookEntry;
-
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,75 +5,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
+import com.binance.api.client.BinanceApiClientFactory;
+import com.binance.api.client.BinanceApiRestClient;
+import com.binance.api.client.BinanceApiWebSocketClient;
+import com.binance.api.client.domain.market.AggTrade;
+import com.binance.api.client.domain.market.OrderBook;
+import com.binance.api.client.domain.market.OrderBookEntry;
+import jdk.jfr.Event;
+
+
 public class BinanceConnector {
 
-    private static final String BIDS  = "BIDS";
-    private static final String ASKS  = "ASKS";
-    private Source.OrderBook orderBookCache;
-    private long lastUpdateId;
     private long orderBookLastUpdateId;
-    private String symbol;
-
-    private Map<String, NavigableMap<BigDecimal, BigDecimal>> depthCache;
-
-    /**
-     * Key is the aggregate trade id, and the value contains the aggregated trade data, which is
-     * automatically updated whenever a new agg data stream event arrives.
-     */
+    private EventManager eventManager;
     private Map<Long, AggTrade> aggTradesCache;
+    private Source.OrderBook orderBookCache;
 
     public BinanceConnector(String symbol) {
-        this.symbol = symbol;
-        initializeDepthCache(symbol);
+        initializeOrderBookCache(symbol);
         initializeAggTradesCache(symbol);
     }
-    /**
-     * Initializes the depth cache by using the REST API.
-     */
-    private void initializeDepthCache(String symbol) {
-        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
-        BinanceApiRestClient client = factory.newRestClient();
-        OrderBook orderBook = client.getOrderBook(symbol.toUpperCase(), 10);
 
-        this.depthCache = new HashMap<>();
-        this.lastUpdateId = orderBook.getLastUpdateId();
-
-        NavigableMap<BigDecimal, BigDecimal> asks = new TreeMap<>(Comparator.reverseOrder());
-        for (OrderBookEntry ask : orderBook.getAsks()) {
-            asks.put(new BigDecimal(ask.getPrice()), new BigDecimal(ask.getQty()));
-        }
-        depthCache.put(ASKS, asks);
-
-        NavigableMap<BigDecimal, BigDecimal> bids = new TreeMap<>(Comparator.reverseOrder());
-        for (OrderBookEntry bid : orderBook.getBids()) {
-            bids.put(new BigDecimal(bid.getPrice()), new BigDecimal(bid.getQty()));
-        }
-        depthCache.put(BIDS, bids);
-    }
-
-
-    /**
-     * Begins streaming of depth events.
-     */
-    public void startDepthEventStreaming(String symbol, EventManager eventManager) {
-        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
-        BinanceApiWebSocketClient client = factory.newWebSocketClient();
-
-        client.onDepthEvent(symbol.toLowerCase(), response -> {
-            if (response.getFinalUpdateId() > lastUpdateId) {
-                System.out.println(response);
-                lastUpdateId = response.getFinalUpdateId();
-                updateOrderBook(getAsks(), response.getAsks());
-                updateOrderBook(getBids(), response.getBids());
-                printDepthCache();
-
-            }
-        });
-    }
     /**
      * Initializes the aggTrades cache by using the REST API.
      */
-    private void initializeAggTradesCache(String symbol) {
+    public void initializeAggTradesCache(String symbol) {
         BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
         BinanceApiRestClient client = factory.newRestClient();
         List<AggTrade> aggTrades = client.getAggTrades(symbol.toUpperCase());
@@ -92,9 +42,33 @@ public class BinanceConnector {
     }
 
     /**
-     * Begins streaming of agg trades events.
+     * Initializes the depth cache by using the REST API.
      */
-    public void startAggTradesEventStreaming(String symbol) {
+    public void initializeOrderBookCache(String symbol) {
+        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
+        BinanceApiRestClient client = factory.newRestClient();
+        OrderBook orderBook = client.getOrderBook(symbol.toUpperCase(), 10);
+
+        this.orderBookCache = new Source.OrderBook();
+        this.orderBookLastUpdateId = orderBook.getLastUpdateId();
+
+        NavigableMap<BigDecimal, BigDecimal> asks = new TreeMap<>(Comparator.reverseOrder());
+        for (OrderBookEntry ask : orderBook.getAsks()) {
+            asks.put(new BigDecimal(ask.getPrice()), new BigDecimal(ask.getQty()));
+        }
+        orderBookCache.put("ASKS", asks);
+
+        NavigableMap<BigDecimal, BigDecimal> bids = new TreeMap<>(Comparator.reverseOrder());
+        for (OrderBookEntry bid : orderBook.getBids()) {
+            bids.put(new BigDecimal(bid.getPrice()), new BigDecimal(bid.getQty()));
+        }
+        orderBookCache.put("BIDS", bids);
+    }
+
+    /**
+     * Begins streaming of Agg Trade Events.
+     */
+    public void startAggTradesEventStreaming(String symbol, EventManager eventManager) {
         BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
         BinanceApiWebSocketClient client = factory.newWebSocketClient();
 
@@ -114,40 +88,30 @@ public class BinanceConnector {
 
             // Store the updated agg trade in the cache
             aggTradesCache.put(aggregatedTradeId, updateAggTrade);
-            System.out.println(updateAggTrade);
+
+            // Publish updated agg trade
+            try {
+                eventManager.publish(response);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         });
     }
 
-    public void initializeOrderBookCache(String symbol){
-        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
-        BinanceApiRestClient client = factory.newRestClient();
-        OrderBook orderBook = client.getOrderBook(symbol.toUpperCase(), 10);
-
-        this.orderBookCache = new Source.OrderBook();
-        this.orderBookLastUpdateId = orderBook.getLastUpdateId();
-
-        NavigableMap<BigDecimal, BigDecimal> asks = new TreeMap<>(Comparator.reverseOrder());
-        for (OrderBookEntry ask : orderBook.getAsks()) {
-            asks.put(new BigDecimal(ask.getPrice()), new BigDecimal(ask.getQty()));
-        }
-        orderBookCache.place("ASKS", asks);
-
-        NavigableMap<BigDecimal, BigDecimal> bids = new TreeMap<>(Comparator.reverseOrder());
-        for (OrderBookEntry bid : orderBook.getBids()) {
-            bids.put(new BigDecimal(bid.getPrice()), new BigDecimal(bid.getQty()));
-        }
-        orderBookCache.place("BIDS", bids);
-    }
-
+    /**
+     * Begins streaming of order book events.
+     */
     public void startOrderBookEventStreaming(String symbol, EventManager eventManager) {
         BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
         BinanceApiWebSocketClient client = factory.newWebSocketClient();
 
         client.onDepthEvent(symbol.toLowerCase(), response -> {
-            if (response.getFinalUpdateId() > orderBookLastUpdateId) {
-                orderBookLastUpdateId = response.getFinalUpdateId();
+            if (response.getUpdateId() > orderBookLastUpdateId) {
+                orderBookLastUpdateId = response.getUpdateId();
                 updateOrderBook(orderBookCache.getAsks(), response.getAsks());
                 updateOrderBook(orderBookCache.getBids(), response.getBids());
+                 //printDepthCache();
 
                 try {
                     eventManager.publish(orderBookCache);
@@ -158,13 +122,13 @@ public class BinanceConnector {
         });
     }
 
-
     /**
      * Updates an order book (bids or asks) with a delta received from the server.
      *
      * Whenever the qty specified is ZERO, it means the price should was removed from the order book.
      */
-    private void updateOrderBook(NavigableMap<BigDecimal, BigDecimal> lastOrderBookEntries, List<OrderBookEntry> orderBookDeltas) {
+    private void updateOrderBook(NavigableMap<BigDecimal,
+            BigDecimal> lastOrderBookEntries, List<OrderBookEntry> orderBookDeltas) {
         for (OrderBookEntry orderBookDelta : orderBookDeltas) {
             BigDecimal price = new BigDecimal(orderBookDelta.getPrice());
             BigDecimal qty = new BigDecimal(orderBookDelta.getQty());
@@ -178,11 +142,11 @@ public class BinanceConnector {
     }
 
     public NavigableMap<BigDecimal, BigDecimal> getAsks() {
-        return depthCache.get(ASKS);
+        return orderBookCache.getAsks();
     }
 
     public NavigableMap<BigDecimal, BigDecimal> getBids() {
-        return depthCache.get(BIDS);
+        return orderBookCache.getBids();
     }
 
     /**
@@ -200,32 +164,10 @@ public class BinanceConnector {
     }
 
     /**
-     * @return a depth cache, containing two keys (ASKs and BIDs), and for each, an ordered list of book entries.
-     */
-    public Map<String, NavigableMap<BigDecimal, BigDecimal>> getDepthCache() {
-        return depthCache;
-    }
-
-    /**
-     * @return an aggTrades cache, containing the aggregated trade id as the key,
-     * and the agg trade data as the value.
-     */
-    public Map<Long, AggTrade> getAggTradesCache() {
-        return aggTradesCache;
-    }
-
-    /**
-     * @return the String symbol denoting the type of currency pair for the data being retrieved
-     */
-    public String getSymbol() {
-        return this.symbol;
-    }
-
-    /**
      * Prints the cached order book / depth of a symbol as well as the best ask and bid price in the book.
      */
-    public void printDepthCache() {
-        System.out.println(depthCache);
+    private void printDepthCache() {
+        System.out.println(orderBookCache);
         System.out.println("ASKS:");
         getAsks().entrySet().forEach(entry -> System.out.println(toDepthCacheEntryString(entry)));
         System.out.println("BIDS:");
@@ -233,27 +175,10 @@ public class BinanceConnector {
         System.out.println("BEST ASK: " + toDepthCacheEntryString(getBestAsk()));
         System.out.println("BEST BID: " + toDepthCacheEntryString(getBestBid()));
     }
-    public OrderBook getOrderBook(String Symbol){
-        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
-        BinanceApiRestClient client = factory.newRestClient();
 
-        OrderBook orderBook = client.getOrderBook(symbol,10);
-        List<OrderBookEntry> asks = orderBook.getAsks();
-        OrderBookEntry firstAskEntry = asks.get(0);
-        return orderBook;
-    }
-    /**
-     * Pretty prints an order book entry in the format "price / quantity".
-     */
     private static String toDepthCacheEntryString(Map.Entry<BigDecimal, BigDecimal> depthCacheEntry) {
         return depthCacheEntry.getKey().toPlainString() + " / " + depthCacheEntry.getValue();
     }
-
-    /*public static void main(String[] args) {
-        new spark.pub.MarketDataManager("ETHBTC");
-    }*/
-
-    /*public static void main (String[] args) {
-        new BinanceConnector("ethbtc");
-    }*/
 }
+
+
