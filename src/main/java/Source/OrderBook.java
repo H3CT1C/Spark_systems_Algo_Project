@@ -18,6 +18,15 @@ public class OrderBook {
         orderBook.put(string, map);
     }
 
+    public Map.Entry<BigDecimal,BigDecimal> getBestBid(){
+        return getBids().firstEntry();
+    }
+
+
+    public Map.Entry<BigDecimal,BigDecimal> getBestAsk(){
+        return getAsks().lastEntry();
+    }
+
     public Map<String,NavigableMap<BigDecimal,BigDecimal>> getOrderBookCache(){
         return orderBook;
     }

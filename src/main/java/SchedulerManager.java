@@ -1,3 +1,4 @@
+import jdk.jfr.Event;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
@@ -8,6 +9,29 @@ import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
 public class SchedulerManager {
+    private EventManager em;
+    private Scheduler scheduler;
 
-    void periodicCallBack(int intervalMillis){}
+    public SchedulerManager(EventManager em) throws SchedulerException{
+        this.em = em;
+        SchedulerFactory schedulerFactory = new StdSchedulerFactory();
+        this.scheduler = schedulerFactory.getScheduler();
+    }
+
+    void periodicCallBack(int intervalMillis, String tag) throws SchedulerException{
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .startNow()
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withIntervalInMilliseconds(intervalMillis)
+                        .repeatForever())
+                        .build();
+
+        JobDetail timer = JobBuilder.newJob(Timer.class)
+                .build();
+        timer.getJobDataMap().put("tag",tag);
+        timer.getJobDataMap().put("em",em);
+        scheduler.scheduleJob(timer,trigger);
+        scheduler.start();
+
+    }
 }
