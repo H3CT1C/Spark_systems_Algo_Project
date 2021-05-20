@@ -8,6 +8,10 @@ import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class SchedulerManager {
     private EventManager em;
     private Scheduler scheduler;
@@ -34,4 +38,6 @@ public class SchedulerManager {
         scheduler.start();
 
     }
+
+
 }

@@ -16,6 +16,8 @@ public class EventBroker<T>{
     public T get() throws InterruptedException{
         return eventQueue.take();
     }
+
+    //remove if not used
     public void broadcast() throws InterruptedException{
         if(eventQueue.isEmpty()){
             System.out.println("No events to broadcast");
