@@ -17,19 +17,6 @@ public class EventBroker<T>{
         return eventQueue.take();
     }
 
-    //remove if not used
-    public void broadcast() throws InterruptedException{
-        if(eventQueue.isEmpty()){
-            System.out.println("No events to broadcast");
-        }
-        else{
-            while(!eventQueue.isEmpty()){
-
-                T event = eventQueue.remove();
-                sendToListeners(event);
-            }
-        }
-    }
     public void sendToListeners(T event) throws InterruptedException{
         for (EventListener listener : listenerList){
             if (event instanceof DepthEvent){

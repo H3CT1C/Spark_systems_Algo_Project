@@ -13,8 +13,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class SchedulerManager {
-    private EventManager em;
-    private Scheduler scheduler;
+    // use final keywords here, tells people the variable does not change
+    private final EventManager em;
+    private final Scheduler scheduler;
 
     public SchedulerManager(EventManager em) throws SchedulerException{
         this.em = em;

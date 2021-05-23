@@ -6,7 +6,7 @@ import org.quartz.JobExecutionException;
 
 public class Timer implements Job {
 
-    public void execute(JobExecutionContext arg0) throws JobExecutionException {
+    public void execute(JobExecutionContext arg0) {
         EventManager em = (EventManager) arg0.getJobDetail().getJobDataMap().get("em");
         String tag = (String) arg0.getJobDetail().getJobDataMap().get("tag");
 

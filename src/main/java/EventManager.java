@@ -15,13 +15,14 @@ public class EventManager{
 
     //remove broadcasts later on!
     public void publish(Source.OrderBook orderBook) throws InterruptedException{
+        System.out.println(orderBook.getBids());
         orderBookBroker.addEvent(orderBook);
-        orderBookBroker.broadcast();
+
     }
 
     public void publish(AggTradeEvent aggTradeEvent) throws InterruptedException{
         aggTradesBroker.addEvent(aggTradeEvent);
-        aggTradesBroker.broadcast();
+
     }
 
     public void publish (ScheduleEvent timer) throws InterruptedException{

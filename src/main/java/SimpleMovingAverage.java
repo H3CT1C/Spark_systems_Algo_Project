@@ -18,21 +18,42 @@ public class SimpleMovingAverage {
     public SimpleMovingAverage(int window){
         this.window = window;
         recentPrices = new Double[window];
+        DescriptiveStatistics stats = new DescriptiveStatistics(window);
     }
-    public Double getWeightedMid(OrderBook orderBook){
+    public Double getMid(OrderBook orderBook){
         Double bestBidPrice= orderBook.getBestBid().getKey().doubleValue();
-        Double bestBidQuantity= orderBook.getBestBid().getValue().doubleValue();
         Double bestAskPrice = orderBook.getBestAsk().getKey().doubleValue();
+        Double bestBidQuantity =  orderBook.getBestBid().getValue().doubleValue();
         Double bestAskQuantity = orderBook.getBestAsk().getValue().doubleValue();
-        Double weightedMid = (bestBidPrice * bestBidQuantity + bestAskPrice *bestAskQuantity)/(bestBidQuantity+bestAskQuantity);
-        return weightedMid;
+        Double Mid = (bestBidPrice * bestBidQuantity  + bestAskPrice * bestAskQuantity )/(bestAskQuantity+bestBidQuantity);
+        return Mid;
     }
+   public void updateRecentPrices(NavigableMap<Long,OrderBook> orderBookCache) throws InterruptedException{
+        OrderBook latestOrderBook = orderBookCache.lastEntry().getValue();
+        recentPrices[pointer] = getMid(latestOrderBook);
+        if(pointer >= window -1){
+            pointer =0;}
+        else{
+            pointer++;
+        }
+
+   }
 
    public Double getSimpleMovingAverage(NavigableMap< Long, OrderBook> orderBookCache) throws InterruptedException{
-        OrderBook latestOrderBookPrice = orderBookCache.lastEntry().getValue();
-        Double weightedPrice = getWeightedMid(latestOrderBookPrice);
-        stats.addValue(weightedPrice);
-        return stats.getMean();
+        Double simpleMovingAverage;
+        if(recentPrices == null){
+            System.out.println("Not enough data to print!");
+            return 0.0;
+
+        }
+        else{
+            for(Double prices : recentPrices){
+               stats.addValue(prices);
+            }
+            simpleMovingAverage = stats.getMean();
+            System.out.println("SMA" + window+ ": " + simpleMovingAverage);
+        }
+        return simpleMovingAverage;
    }
 
 
