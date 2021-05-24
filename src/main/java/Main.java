@@ -12,7 +12,7 @@ public class Main {
     MarketDataManager marketDataManager = new MarketDataManager("ETHBTC", eventManager);
     SchedulerManager schedulerManager = new SchedulerManager(eventManager);
     AnalyticManager analyticManager = new AnalyticManager(eventManager,schedulerManager);
-    CrossOverManager crossOverManager = new CrossOverManager(5, 10, 100.0);
+    CrossOverManager crossOverManager = new CrossOverManager(5, 10, 0.00004);
     analyticManager.addListener(crossOverManager);
 
     ExecutorService threadpool = Executors.newFixedThreadPool(3);

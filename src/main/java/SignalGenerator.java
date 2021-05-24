@@ -27,11 +27,13 @@ public void generateSignal(Double threshold){
     }   else if(currentPosition == 1){
             if(movingAvg2 > movingAvg1 + threshold){
                 System.out.println("Sell!");
+                currentPosition = -1;
             }
         }
         else{
             if(movingAvg1> movingAvg2+ threshold){
                 System.out.println("Buy!");
+                currentPosition = 1;
             }
         }
         }
