@@ -65,39 +65,7 @@ public class BinanceConnector {
         orderBookCache.put("BIDS", bids);
     }
 
-    /**
-     * Begins streaming of Agg Trade Events.
-     */
-    public void startAggTradesEventStreaming(String symbol, EventManager eventManager) {
-        BinanceApiClientFactory factory = BinanceApiClientFactory.newInstance();
-        BinanceApiWebSocketClient client = factory.newWebSocketClient();
 
-        client.onAggTradeEvent(symbol.toLowerCase(), response -> {
-            Long aggregatedTradeId = response.getAggregatedTradeId();
-            AggTrade updateAggTrade = aggTradesCache.get(aggregatedTradeId);
-            if (updateAggTrade == null) {
-                // new agg trade
-                updateAggTrade = new AggTrade();
-            }
-            updateAggTrade.setAggregatedTradeId(aggregatedTradeId);
-            updateAggTrade.setPrice(response.getPrice());
-            updateAggTrade.setQuantity(response.getQuantity());
-            updateAggTrade.setFirstBreakdownTradeId(response.getFirstBreakdownTradeId());
-            updateAggTrade.setLastBreakdownTradeId(response.getLastBreakdownTradeId());
-            updateAggTrade.setBuyerMaker(response.isBuyerMaker());
-
-            // Store the updated agg trade in the cache
-            aggTradesCache.put(aggregatedTradeId, updateAggTrade);
-
-            // Publish updated agg trade
-            try {
-                eventManager.publish(response);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        });
-    }
 
     /**
      * Begins streaming of order book events.

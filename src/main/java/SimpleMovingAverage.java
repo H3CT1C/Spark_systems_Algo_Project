@@ -39,21 +39,22 @@ public class SimpleMovingAverage {
 
    }
 
-   public Double getSimpleMovingAverage(NavigableMap< Long, OrderBook> orderBookCache) throws InterruptedException{
-        Double simpleMovingAverage;
-        if(recentPrices == null){
-            System.out.println("Not enough data to print!");
-            return 0.0;
+   public Double getSimpleMovingAverage(){
+       Double totalPrice = 0.0;
+       int count = 0;
+       for(Double price: recentPrices){
+           if(price == null){
+               System.out.println("Not enough data!");
+               return 0.0;
 
-        }
-        else{
-            for(Double prices : recentPrices){
-               stats.addValue(prices);
-            }
-            simpleMovingAverage = stats.getMean();
-            System.out.println("SMA" + window+ ": " + simpleMovingAverage);
-        }
-        return simpleMovingAverage;
+           }
+           totalPrice+= price;
+           count++;
+       }
+       Double movingAvg = totalPrice/count;
+       System.out.println("SMA" + window + ": " + movingAvg);
+       return movingAvg;
+
    }
 
 

@@ -16,9 +16,6 @@ public class MarketDataManager implements Runnable{
         binanceConnector.startOrderBookEventStreaming(symbol, eventManager);
     }
 
-    public void subscribeTrades(){
-        binanceConnector.startAggTradesEventStreaming(symbol, eventManager);
-    }
 
 
     @Override
